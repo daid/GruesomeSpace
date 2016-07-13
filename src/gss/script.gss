@@ -1,0 +1,11 @@
+var a = "Hello"
+var b = "World"
+var n = 0
+
+var list1 = []
+var list2 = [0]
+var list3 = [0, 1, 2]
+
+print(list3[-1])
+list3[2] = 5
+print(list3[2])
