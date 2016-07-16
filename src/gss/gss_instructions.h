@@ -1,14 +1,9 @@
 #ifndef GSS_INSTRUCTIONS_H
 #define GSS_INSTRUCTIONS_H
 
+#include <functional>
 #include <stdint.h>
 #include "stringImproved.h"
-
-class GssNativeFunction
-{
-public:
-    string name;
-};
 
 class GssInstruction
 {

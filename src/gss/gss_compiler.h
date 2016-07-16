@@ -3,6 +3,7 @@
 
 #include "gss_tokenizer.h"
 #include "gss_instructions.h"
+#include "gss_native_function_call_data.h"
 
 /*
     The GssCompiler takes tokens from the GssTokenizer and turns this into
@@ -27,7 +28,7 @@ private:
     std::vector< std::vector< GssToken::Type > > binary_operators;
     
     void parseBlock(int minimal_indent);
-    
+    void parseStatement(bool with_end_of_line);
     void parseExpression();
     void parseBinaryOperator(unsigned int precedence);
     void parseSubscript();

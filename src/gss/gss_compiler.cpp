@@ -74,6 +74,28 @@ void GssCompiler::parseBlock(int minimal_indent)
                 parseBlock(start_indent + 1);
                 instructions.emplace_back(GssInstruction::Type::jump, while_jump_location);
                 instructions[jump_instruction_index].data.i = instructions.size();
+            }else if (token.data == "for")
+            {
+                tokenizer.get();
+                parseStatement(false);
+                expect(GssToken::Type::semi_colon);
+                int jump_condition_target = instructions.size();
+                parseExpression();
+                instructions.emplace_back(GssInstruction::Type::jump_if_zero, 0);
+                int jump_to_end_instruction_index = instructions.size() - 1;
+                instructions.emplace_back(GssInstruction::Type::jump, 0);
+                int jump_past_condition_index = instructions.size() - 1;
+                instructions.emplace_back(GssInstruction::Type::jump, 0);
+                int jump_increment_target = instructions.size();
+                expect(GssToken::Type::semi_colon);
+                parseStatement(false);
+                expect(GssToken::Type::colon);
+                instructions.emplace_back(GssInstruction::Type::jump, jump_condition_target);
+                instructions[jump_past_condition_index].data.i = instructions.size();
+                expect(GssToken::Type::end_of_line);
+                parseBlock(start_indent + 1);
+                instructions.emplace_back(GssInstruction::Type::jump, jump_increment_target);
+                instructions[jump_to_end_instruction_index].data.i = instructions.size();
             }else if (token.data == "var")
             {
                 tokenizer.get();
@@ -155,37 +177,7 @@ void GssCompiler::parseBlock(int minimal_indent)
                 expect(GssToken::Type::end_of_line);
                 instructions.emplace_back(GssInstruction::Type::return_from_function);
             }else{
-                parseExpression();
-                token = tokenizer.get();
-                if (token.type == GssToken::Type::assign)
-                {
-                    GssInstruction last_instruction = instructions.back();
-                    instructions.pop_back();
-                    parseExpression();
-                    switch(last_instruction.type)
-                    {
-                    case GssInstruction::Type::push_global_by_index:
-                        instructions.emplace_back(GssInstruction::Type::assign_global_by_index, last_instruction.data.i);
-                        break;
-                    case GssInstruction::Type::get_from_table:
-                        instructions.emplace_back(GssInstruction::Type::assign_to_table, last_instruction.data.i);
-                        break;
-                    case GssInstruction::Type::get_from_table_by_string_table:
-                        instructions.emplace_back(GssInstruction::Type::assign_to_table_by_string_table, last_instruction.data.i);
-                        break;
-                    case GssInstruction::Type::push_local_by_index:
-                        instructions.emplace_back(GssInstruction::Type::assign_local_by_index, last_instruction.data.i);
-                        break;
-                    default:
-                        throw GssCompilerException(token, "Parsing error, impossible assignment (" + last_instruction.toString() + ")");
-                    }
-                    expect(GssToken::Type::end_of_line);
-                }else if (token.type == GssToken::Type::end_of_line)
-                {
-                    instructions.emplace_back(GssInstruction::Type::pop, 1);
-                }else{
-                    throw GssCompilerException(token, "Unexpected: " + token.toString());
-                }
+                parseStatement(true);
             }
         }else{
             throw GssCompilerException(token, "Unexpected: " + token.toString());
@@ -442,6 +434,42 @@ void GssCompiler::parseBinaryOperator(unsigned int precedence)
 void GssCompiler::parseExpression()
 {
     parseBinaryOperator(0);
+}
+
+void GssCompiler::parseStatement(bool with_end_of_line)
+{
+    parseExpression();
+    GssToken& token = tokenizer.get();
+    if (token.type == GssToken::Type::assign)
+    {
+        GssInstruction last_instruction = instructions.back();
+        instructions.pop_back();
+        parseExpression();
+        switch(last_instruction.type)
+        {
+        case GssInstruction::Type::push_global_by_index:
+            instructions.emplace_back(GssInstruction::Type::assign_global_by_index, last_instruction.data.i);
+            break;
+        case GssInstruction::Type::get_from_table:
+            instructions.emplace_back(GssInstruction::Type::assign_to_table, last_instruction.data.i);
+            break;
+        case GssInstruction::Type::get_from_table_by_string_table:
+            instructions.emplace_back(GssInstruction::Type::assign_to_table_by_string_table, last_instruction.data.i);
+            break;
+        case GssInstruction::Type::push_local_by_index:
+            instructions.emplace_back(GssInstruction::Type::assign_local_by_index, last_instruction.data.i);
+            break;
+        default:
+            throw GssCompilerException(token, "Parsing error, impossible assignment (" + last_instruction.toString() + ")");
+        }
+        if (with_end_of_line)
+            expect(GssToken::Type::end_of_line);
+    }else if (with_end_of_line && token.type == GssToken::Type::end_of_line)
+    {
+        instructions.emplace_back(GssInstruction::Type::pop, 1);
+    }else{
+        throw GssCompilerException(token, "Unexpected: " + token.toString());
+    }
 }
 
 GssToken GssCompiler::expect(GssToken::Type type)

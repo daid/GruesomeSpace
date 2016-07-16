@@ -9,12 +9,6 @@ void GssEngine::compile(string code)
     instruction_pointer = 0;
     locals_stack_position = 0;
     
-    {
-        GssNativeFunction func;
-        func.name = "print";
-        native_functions.push_back(func);
-    }
-    
     try
     {
         GssTokenizer tokenizer(code);
@@ -67,10 +61,15 @@ void GssEngine::compile(string code)
     LOG(INFO) << "Free memory: " << memory->getFreeMemoryAmount();
 }
 
+void GssEngine::addNativeFunction(string name, std::function<void(GssNativeFunctionCallData&)> function)
+{
+    native_functions.emplace_back(name, function);
+}
+
 void GssEngine::step()
 {
     GssInstruction& instruction = instructions[instruction_pointer];
-    LOG(DEBUG) << memory->getStackSize() << ":" << locals_stack_position << ":" << instruction.toString();
+    //LOG(DEBUG) << memory->getStackSize() << ":" << locals_stack_position << ":" << instruction.toString();
     switch(instruction.type)
     {
     case GssInstruction::Type::nop:
@@ -237,17 +236,10 @@ void GssEngine::step()
                 return;
             }else if (func_info->type == GssVariant::Type::native_function)
             {
-                for(int n=0; n<instruction.data.i; n++)
-                {
-                    GssVariant* v = memory->getStack(-1);
-                    if (v->type == GssVariant::Type::string)
-                    {
-                        LOG(INFO) << memory->getString(v->data.i);
-                    }else{
-                        LOG(INFO) << v->toString();
-                    }
-                    memory->popStack();
-                }
+                GssNativeFunctionCallData function_call_data(memory->getStackSize() - instruction.data.i, instruction.data.i, memory);
+                func_info->type = GssVariant::Type::none; //The func_info stack location will be used to store the return value. So set this to None in case the native function does not set a return value.
+                native_functions[func_info->data.i].function(function_call_data);
+                memory->setStackSize(memory->getStackSize() - instruction.data.i);
             }else{
                 throw GssRuntimeException("Tried to call function on non-function variable: " + func_info->toString());
             }

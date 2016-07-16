@@ -29,7 +29,7 @@ void GuiCanvas::render(sf::RenderTarget& window)
         drawDebugElements(window_rect, window);
     }
 
-    if (InputHandler::mouseIsPressed(sf::Mouse::Left) || InputHandler::mouseIsPressed(sf::Mouse::Right) || InputHandler::mouseIsPressed(sf::Mouse::Middle))
+    if (InputHandler::mouseIsPressed(sf::Mouse::Left))
     {
         click_element = getClickElement(mouse_position);
         if (!click_element)
@@ -40,13 +40,13 @@ void GuiCanvas::render(sf::RenderTarget& window)
         if (focus_element)
             focus_element->focus = true;
     }
-    if (InputHandler::mouseIsDown(sf::Mouse::Left) || InputHandler::mouseIsDown(sf::Mouse::Right) || InputHandler::mouseIsDown(sf::Mouse::Middle))
+    if (InputHandler::mouseIsDown(sf::Mouse::Left))
     {
         if (previous_mouse_position != mouse_position)
             if (click_element)
                 click_element->onMouseDrag(mouse_position);
     }
-    if (InputHandler::mouseIsReleased(sf::Mouse::Left) || InputHandler::mouseIsReleased(sf::Mouse::Right) || InputHandler::mouseIsReleased(sf::Mouse::Middle))
+    if (InputHandler::mouseIsReleased(sf::Mouse::Left))
     {
         if (click_element)
         {
